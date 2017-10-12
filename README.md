@@ -11,4 +11,9 @@ Instance - Need better name but a record of one run includes success/failure sta
 # Inspiration
 
 https://github.com/harrisiirak/cron-parser \
-https://crontab.guru/
+https://crontab.guru/ \
+
+https://github.com/fzaninotto/uptime \
+http://www.camintejs.com/en \
+https://github.com/iloire/watchmen
+
