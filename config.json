@@ -1,0 +1,16 @@
+{
+  "job": {
+    "cron": "*/5 * * * * ",
+    "uri": "/res/somescript.php",
+    "protocol": "http",
+    "domains": [
+      "www.example.com",
+      "www.test.com"
+    ]
+  },
+  "job2": {
+    "cron": "*/5 * * * * ",
+    "url": "http://www.fivetechnology.com",
+    "string": "Powered By SMC"
+  }
+}
