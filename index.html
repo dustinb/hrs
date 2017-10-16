@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css" integrity="sha384-/Y6pD6FV/Vv2HJnA6t+vslU6fwYXjCFtcEpHbNJ0lyAFsXTsjBbfaDjzALeQsN6M" crossorigin="anonymous">
+
+    <script type="text/javascript" src="//code.jquery.com/jquery-2.1.4.min.js"></script>
+    <script type="text/javascript" src="https://unpkg.com/vue"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.js"></script>
+    <script type="text/javascript">
+
+        var jobs = [];
+
+        $(function() {
+          console.log('load page');
+
+          var app = new Vue({
+            el: '#app',
+            data: {
+              jobs: jobs
+            }
+          });
+
+          var socket = io();
+
+          socket.on('jobs', function(data) {
+            console.log(data);
+
+            for(var i=0; i<data.length; i++) {
+              Vue.set(jobs, i, data[i]);
+            }
+          });
+
+          socket.on('message', function(msg) {
+            console.log(msg);
+            $('#message').append(msg + '<br />');
+          });
+
+          socket.emit('register', '');
+
+        });
+      </script>
+  </head>
+  <body>
+  <div id="app" class="container-fluid">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>url</th>
+          <th>Next Run</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="job in jobs">
+          <td>{{ job.url }}</td>
+          <td>{{ job.nextRun }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <div><pre id="message"></pre></div>
+  </div>
+  </body>
+</html>
