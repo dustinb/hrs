@@ -11,8 +11,8 @@ Schedule, record, and notify of http based cron jobs.
 # Setup
 
 1. Clone this repository
-2. npm install
-3. nodejs index.js
+2. `npm install`
+3. `nodejs index.js`
 4. Browse to http://localhost:3000 or server address
 
 ![](hrs.png)
