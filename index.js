@@ -1,72 +1,66 @@
 var parser = require('cron-parser');
 var request = require('request');
+var fs = require('fs');
+var moment = require('moment');
+var loopSeconds = 15;
+var jobs = [];
 
-function doRequest(url) {
-  request.get(url, function (error, response, body) {
-    console.log(url);
-  });
-}
-
-var url = "http://www.fivetechnology.com";
-doRequest(url);
-url = "http://www.smumn.edu";
-doRequest(url);
-
-try {
-  var interval = parser.parseExpression('*/2 * * * *');
-
-  console.log('Date: ', interval.next().toString()); // Sat Dec 29 2012 00:42:00 GMT+0200 (EET)
-  console.log('Date: ', interval.next().toString()); // Sat Dec 29 2012 00:44:00 GMT+0200 (EET)
-
-  console.log('Date: ', interval.prev().toString()); // Sat Dec 29 2012 00:42:00 GMT+0200 (EET)
-  console.log('Date: ', interval.prev().toString()); // Sat Dec 29 2012 00:40:00 GMT+0200 (EET)
-} catch (err) {
-  console.log('Error: ' + err.message);
-}
-
-//
-
-var options = {
-  currentDate: new Date('Wed, 26 Dec 2012 12:38:53 UTC'),
-  endDate: new Date('Wed, 26 Dec 2012 14:40:00 UTC'),
-  iterator: true
+var Job = function (conf) {
+  this.cron = conf.cron;
+  this.uri = conf.uri;
+  // Determine from protocol, uri, domains or set
+  this.url = conf.url;
+  this.protocol = conf.protocol;
+  this.domains = conf.domains;
+  this.interval = parser.parseExpression(this.cron);
 };
 
-try {
-  var interval = parser.parseExpression('*/22 * * * *', options);
+Job.prototype.next = function () {
+  this._next = this.interval.next();
+};
 
-  while (true) {
-    try {
-      var obj = interval.next();
-      console.log('value:', obj.value.toString(), 'done:', obj.done);
-    } catch (e) {
-      break;
+Job.prototype.run = function() {
+  var that = this;
+  request.get(this.url, function (error, response, body) {
+    console.log(that.url);
+    that.statusCode = response.statusCode;
+    that.statusMessage = response.statusMessage;
+    that.body = body;
+    // TODO: Record status code, body, request time, string chech
+  });
+};
+
+console.log("Reading jobs from config.json");
+var conf = JSON.parse(fs.readFileSync('config.json', 'utf8'));
+conf.forEach(function(jobData) {
+    var job = new Job(jobData);
+    job.next();
+    jobs.push(job);
+});
+
+// Start timing loop. Each job will be checked on every loop to determine if it's time to run
+console.log("Setting up timer for " + loopSeconds + " seconds");
+setInterval(function() {
+  var now = moment();
+
+  for(var i=0; i<jobs.length; i++) {
+    var job = jobs[i];
+
+    if (job.done) continue;
+
+    // TODO: How to get the moment from CronDate
+    if (now.isSameOrAfter(job._next._date, 'minute')) {
+      console.log(now.toString() + ' > ' + job._next.toString());
+      job.run();
+      job.next();
+    } else {
+      console.log(job.url + " won't run until " + job._next.toString());
     }
   }
+}, loopSeconds * 1000);
 
-  // value: Wed Dec 26 2012 14:44:00 GMT+0200 (EET) done: false
-  // value: Wed Dec 26 2012 15:00:00 GMT+0200 (EET) done: false
-  // value: Wed Dec 26 2012 15:22:00 GMT+0200 (EET) done: false
-  // value: Wed Dec 26 2012 15:44:00 GMT+0200 (EET) done: false
-  // value: Wed Dec 26 2012 16:00:00 GMT+0200 (EET) done: false
-  // value: Wed Dec 26 2012 16:22:00 GMT+0200 (EET) done: true
-} catch (err) {
-  console.log('Error: ' + err.message);
-}
+// Setup sockets for reporting
 
-//
 
-var options = {
-  currentDate: '2016-03-27 00:00:01',
-  tz: 'Europe/Athens'
-};
 
-try {
-  var interval = parser.parseExpression('0 * * * *', options);
 
-  console.log('Date: ', interval.next().toString()); // Date:  Sun Mar 27 2016 01:00:00 GMT+0200
-  console.log('Date: ', interval.next().toString()); // Date:  Sun Mar 27 2016 02:00:00 GMT+0200
-  console.log('Date: ', interval.next().toString()); // Date:  Sun Mar 27 2016 04:00:00 GMT+0300 (Notice DST transition)
-} catch (err) {
-  console.log('Error: ' + err.message);
-}

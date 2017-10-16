@@ -23,6 +23,7 @@
   "homepage": "https://github.com/dustinb/hrs#readme",
   "dependencies": {
     "cron-parser": "^2.4.3",
+    "moment": "^2.19.1",
     "request": "^2.83.0"
   }
 }

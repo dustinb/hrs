@@ -1,16 +1,19 @@
-{
-  "job": {
-    "cron": "*/5 * * * * ",
+[
+  {
+    "cron": "30 2 * * * ",
     "uri": "/res/somescript.php",
+    "url": "http://www.google.com",
     "protocol": "http",
     "domains": [
       "www.example.com",
       "www.test.com"
-    ]
+    ],
+    "startDate": "",
+    "endDate": "Wed, 26 Dec 2012 14:40:00 UTC"
   },
-  "job2": {
-    "cron": "*/5 * * * * ",
-    "url": "http://www.fivetechnology.com",
+  {
+    "cron": "*/1 * * * * ",
+    "url": "http://www.example.com",
     "string": "Powered By SMC"
   }
-}
+]
