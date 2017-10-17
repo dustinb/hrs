@@ -6,60 +6,127 @@
 
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css" integrity="sha384-/Y6pD6FV/Vv2HJnA6t+vslU6fwYXjCFtcEpHbNJ0lyAFsXTsjBbfaDjzALeQsN6M" crossorigin="anonymous">
 
-    <script type="text/javascript" src="//code.jquery.com/jquery-2.1.4.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js" integrity="sha384-b/U6ypiBEHpOf/4+1nzFpr53nxSS+GLCkfwBdFNTxtclqqenISfwAzpKaMNFNmj4" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/js/bootstrap.min.js" integrity="sha384-h0AbiXch4ZDo7tp9hKZ4TsHbi047NrKGLO3SEJAg45jXxnGIfYzk4Si90RDIqNm1" crossorigin="anonymous"></script>
+
     <script type="text/javascript" src="https://unpkg.com/vue"></script>
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.js"></script>
     <script type="text/javascript">
 
-        var jobs = [];
+        var groups = [];
+        var app = {
+          serverTime: '',
+          jobCount: 0
+        };
+        var jobModal = {
+          title: "Test Modal",
+          body: "HTTP Response goes here"
+        };
 
         $(function() {
           console.log('load page');
 
-          var app = new Vue({
+          var view = new Vue({
             el: '#app',
             data: {
-              jobs: jobs
+              groups: groups,
+              app: app,
+              jobModal: jobModal
+            },
+            methods: {
+              modal: function(job) {
+                jobModal.title = job.title;
+                jobModal.body = job.body;
+                $("#modal").modal();
+              }
             }
           });
 
           var socket = io();
 
-          socket.on('jobs', function(data) {
-            console.log(data);
-
+          socket.on('groups', function(data) {
             for(var i=0; i<data.length; i++) {
-              Vue.set(jobs, i, data[i]);
+              Vue.set(groups, i, data[i]);
             }
           });
 
+          socket.on('tick', function(data) {
+            app.serverTime = data.serverTime;
+            $('#message').html(data.serverTime + '<br />');
+          });
+
           socket.on('message', function(msg) {
-            console.log(msg);
             $('#message').append(msg + '<br />');
           });
 
-          socket.emit('register', '');
+          socket.emit('register');
 
         });
       </script>
   </head>
-  <body>
+  <body style="padding:40px">
   <div id="app" class="container-fluid">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>url</th>
-          <th>Next Run</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="job in jobs">
-          <td>{{ job.url }}</td>
-          <td>{{ job.nextRun }}</td>
-        </tr>
-      </tbody>
-    </table>
-    <div><pre id="message"></pre></div>
+
+    <div style="padding: 20px">
+      <h3>Server Time: {{ app.serverTime }}</h3>
+    </div>
+
+    <div id="accordion" role="tablist">
+      <div class="card" v-for="(group, key, index) in groups">
+        <div class="card-header" role="tab" xxid="headingOne">
+          <h5 class="mb-0">
+            <a data-toggle="collapse" v-bind:href="'#group' + key">
+              {{ group.title }}
+            </a>
+          </h5>
+        </div>
+        <div v-bind:id="'group' + key " vbind:class="'show': index == 0" class="collapse" data-parent="#accordion">
+          <div class="card-body">
+            <table class="table">
+              <thead>
+              <tr>
+                <th>Title</th>
+                <th>cron</th>
+                <th>URL</th>
+                <th>Next Run</th>
+                <th>Status</th>
+              </tr>
+              </thead>
+              <tbody>
+              <tr v-for="job in group.jobs">
+                <td>{{ job.title }}</td>
+                <td><a v-bind:href="job.guru" target="_blank">{{ job.cron }}</a></td>
+                <td>{{ job.url }}</td>
+                <td>{{ job.nextRun }}</td>
+                <td><a href="#"><span v-on:click="modal(job)" class="badge badge-info">{{ job.lastStatus }}</span></a></td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="exampleModalLabel">{{ jobModal.title }}</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            {{ jobModal.body }}
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
   </body>
 </html>

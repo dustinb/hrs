@@ -1,19 +1,29 @@
 [
   {
-    "cron": "30 2 * * * ",
-    "uri": "/res/somescript.php",
-    "url": "http://www.google.com",
-    "protocol": "http",
-    "domains": [
-      "www.example.com",
-      "www.test.com"
-    ],
-    "startDate": "",
-    "endDate": "Wed, 26 Dec 2012 14:40:00 UTC"
+    "title": "Test Group",
+    "jobs": [
+      {
+        "title": "Google Home Page",
+        "cron": "30 2 * * * ",
+        "url": "http://www.google.com"
+      },
+      {
+        "title": "Example",
+        "cron": "*/5 * * * * ",
+        "url": "http://www.example.com",
+        "string": "Powered By SMC"
+      }
+    ]
   },
   {
-    "cron": "*/1 * * * * ",
-    "url": "http://www.example.com",
-    "string": "Powered By SMC"
+    "title": "Test Group 2",
+    "jobs": [
+      {
+        "title": "Cron Guru",
+        "cron": "30 2 * 1-5 *",
+        "url": "http://www.crontab.guru"
+      }
+    ]
   }
 ]
+

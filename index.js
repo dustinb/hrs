@@ -2,17 +2,39 @@ var parser = require('cron-parser');
 var request = require('request');
 var fs = require('fs');
 var moment = require('moment');
-var loopSeconds = 15;
-var jobs = [];
+
+var loopSeconds = 60;
+var configFile = 'config.json';
+
+var argv = require('minimist')(process.argv.slice(2));
+if (argv.c) {
+  configFile = argv.c;
+}
+if (argv.tickLength || argv.t) {
+  loopSeconds = argv.t;
+}
 
 var Job = function (conf) {
+  this.title = conf.title;
   this.cron = conf.cron;
   this.uri = conf.uri;
-  // Determine from protocol, uri, domains or set
-  this.url = conf.url;
-  this.protocol = conf.protocol;
   this.domains = conf.domains;
+  this.protocol = conf.protocol;
+
+  // Determine from protocol, uri, domains
+  this.urls = [];
+  if (this.uri) {
+    this.url = this.protocol + '://' + this.domains[0] + this.uri;
+    for(i=0; i<this.domains.length; i++) {
+      this.urls.push(this.protocol + '://' + this.domains[i] + this.uri);
+    }
+  } else {
+    this.url = conf.url;
+  }
+
+  this.guru = "https://crontab.guru/#" + this.cron.replace(' ', '_');
   this.interval = parser.parseExpression(this.cron);
+  this.lastStatus = 'N/A';
 };
 
 Job.prototype.next = function () {
@@ -22,38 +44,49 @@ Job.prototype.next = function () {
 
 Job.prototype.run = function() {
   var that = this;
-  request.get(this.url, function (error, response, body) {
-    console.log(that.url);
-    that.statusCode = response.statusCode;
-    that.statusMessage = response.statusMessage;
-    that.body = body;
-    // TODO: Record status code, body, request time, string chech
-  });
+  if (this.uri && this.urls.length) {
+    // Multiple domains
+    for(var i=0; i<this.urls.length; i++) {
+      request.get(this.urls[i], function (error, response, body) {
+        that.statusCode = response.statusCode;
+        that.lastStatus = response.statusMessage;
+        that.body = body;
+        // TODO: Record status code, body, request time, string check
+      });
+    }
+  } else {
+    request.get(this.url, function (error, response, body) {
+      that.statusCode = response.statusCode;
+      that.lastStatus = response.statusMessage;
+      that.body = body;
+      // TODO: Record status code, body, request time, string check
+    });
+  }
+
 };
 
-console.log("Reading jobs from config.json");
-var conf = JSON.parse(fs.readFileSync('config.json', 'utf8'));
-conf.forEach(function(jobData) {
-    var job = new Job(jobData);
+console.log("Reading groups/jobs from" + configFile);
+var groups = JSON.parse(fs.readFileSync(configFile, 'utf8'));
+groups.forEach(function(group) {
+  for (var i=0; i<group.jobs.length; i++) {
+    var job = new Job(group.jobs[i]);
     job.next();
-    jobs.push(job);
+    group.jobs[i] = job;
+  }
 });
 
-// Setup sockets for reporting
+// Setup HTTP server and sockets.  We only serve one page
 var server = require('http').createServer(function(req, res) {
-  console.log('http request');
   res.end(fs.readFileSync('index.html', 'utf8'));
 });
 
 var io = require('socket.io')(server);
 
 io.on('connection', function(socket) {
-  socket.valid = true;
-
   // Will validate the connection
   socket.on('register', function(data) {
-    console.log('Register');
-    socket.emit('jobs', jobs);
+    socket.emit('groups', groups);
+    io.emit('tick', {serverTime: moment().format('LLLL')});
   });
 });
 
@@ -64,24 +97,22 @@ console.log("Setting up timer for " + loopSeconds + " seconds");
 setInterval(function() {
   var now = moment();
 
-  for(var i=0; i<jobs.length; i++) {
-    var job = jobs[i];
+  io.emit('tick', {serverTime: now.format('LLLL')});
 
-    if (job.done) continue;
+  for (var g=0; g<groups.length; g++) {
+    var group = groups[g];
+    for (var i=0; i<group.jobs.length; i++) {
+      var job = group.jobs[i];
+      if (job.done) continue;
 
-    // TODO: How to get the moment from CronDate
-    if (now.isSameOrAfter(job._next._date, 'minute')) {
-      io.emit('message', now.toString() + ' > ' + job._next.toString());
-      job.run();
-      job.next();
-    } else {
-      io.emit('message', job.url + " won't run until " + job._next.toString());
+      // TODO: Correct way to get moment object from CronDate?
+      if (now.isSameOrAfter(job._next._date, 'minute')) {
+        job.run();
+        job.next();
+      }
     }
   }
 }, loopSeconds * 1000);
-
-
-
 
 
 
