@@ -34,9 +34,17 @@
               app: app,
               jobModal: jobModal
             },
+            computed: {
+              classStatus: function() {
+                return {
+                  'badge-info': this.lastStatus == 'OK',
+                  'badge-danger': this.lastStatus != 'OK'
+                }
+              }
+            },
             methods: {
               modal: function(job) {
-                jobModal.title = job.title;
+                jobModal.title = job.statusCode + ': ' + job.lastStatus;
                 jobModal.body = job.body;
                 $("#modal").modal();
               }
@@ -48,6 +56,17 @@
           socket.on('groups', function(data) {
             for(var i=0; i<data.length; i++) {
               Vue.set(groups, i, data[i]);
+            }
+          });
+
+          // Identify the job that was updated and set
+          socket.on('job', function(job) {
+            for(var i=0; i<groups.length; i++) {
+              for(var j=0; j<groups[i].jobs.length; j++) {
+                if (groups[i].jobs[j].cron === job.cron && groups[i].jobs[j].url === job.url) {
+                  Vue.set(groups[i].jobs, j, job);
+                }
+              }
             }
           });
 
@@ -81,7 +100,7 @@
             </a>
           </h5>
         </div>
-        <div v-bind:id="'group' + key " vbind:class="'show': index == 0" class="collapse" data-parent="#accordion">
+        <div v-bind:id="'group' + key" v-bind:class="{show: key == 0}" class="collapse" data-parent="#accordion">
           <div class="card-body">
             <table class="table">
               <thead>
@@ -94,12 +113,12 @@
               </tr>
               </thead>
               <tbody>
-              <tr v-for="job in group.jobs">
+              <tr v-for="job in group.jobs" v-bind:class="{'table-danger': job.statusCode != 200 && job.statusCode != 0}">
                 <td>{{ job.title }}</td>
                 <td><a v-bind:href="job.guru" target="_blank">{{ job.cron }}</a></td>
                 <td>{{ job.url }}</td>
                 <td>{{ job.nextRun }}</td>
-                <td><a href="#"><span v-on:click="modal(job)" class="badge badge-info">{{ job.lastStatus }}</span></a></td>
+                <td><a href="#" v-bind:title="job.string"><span v-on:click="modal(job)" v-bind:class="{'badge-info': job.statusCode == 200, 'badge-danger': job.statusCode != 200 && job.statusCode != 0}" class="badge" v-bind:title="job.lastStatus">{{job.statusCode}}</span></a></td>
               </tr>
               </tbody>
             </table>

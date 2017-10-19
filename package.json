@@ -1,6 +1,6 @@
 {
   "name": "hrs",
-  "version": "1.0.0",
+  "version": "0.0.4",
   "description": "HTTP Resource Scheduler",
   "main": "index.js",
   "scripts": {
@@ -26,6 +26,7 @@
     "minimist": "^1.2.0",
     "moment": "^2.19.1",
     "request": "^2.83.0",
+    "slack-node": "^0.1.8",
     "socket.io": "^2.0.3"
   }
 }
