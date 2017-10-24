@@ -1,6 +1,9 @@
 {
   "disabled": false,
   "slackhook": "",
+  "slackChannel": "#hrs",
+  "port": 3000,
+  "defaultTimeout": 120,
   "groups": [
     {
       "title": "Site Monitors",

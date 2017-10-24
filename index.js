@@ -14,7 +14,6 @@ if (argv.c) {
 console.log("Reading configuration from " + configFile);
 var config = JSON.parse(fs.readFileSync(configFile, 'utf8'));
 
-
 // Setup HTTP server and sockets.  We only serve one page
 var server = require('http').createServer(function(req, res) {
   res.end(fs.readFileSync('index.html', 'utf8'));
@@ -67,7 +66,7 @@ Job.prototype.init = function() {
 
 Job.prototype.request = function(url) {
   var that = this;
-  request.get({url: url, timeout: 120 * 1000}, function (error, response, body) {
+  request.get({url: url, timeout: config.defaultTimeout * 1000}, function (error, response, body) {
     if (response) {
       that.statusCode = response.statusCode;
       that.lastStatus = response.statusMessage;
@@ -82,8 +81,7 @@ Job.prototype.request = function(url) {
       if (config.slackhook && that.statusCode != 200) {
         console.log("Sending Slack notification");
         slack.webhook({
-          channel: "#hrs",
-          username: "5tool",
+          channel: config.slackChannel,
           // Not sending the URL as Slack may "unfurl" it essentially running the job again
           text: that.group + ": " + that.title + ": " + that.statusCode + ": " + that.lastStatus
         }, function(err, response) {
@@ -138,7 +136,7 @@ config.groups.forEach(function(group) {
 });
 
 
-server.listen(3000);
+server.listen(config.port);
 
 // Start timing loop. Each job will be checked on every loop to determine if it's time to run
 if (argv.t) {

@@ -44,7 +44,7 @@
             },
             methods: {
               modal: function(job) {
-                jobModal.title = job.statusCode + ': ' + job.lastStatus;
+                jobModal.title = job.title + ' - ' + job.statusCode + ': ' + job.lastStatus;
                 jobModal.body = job.body;
                 $("#modal").modal();
               }
@@ -93,7 +93,7 @@
 
     <div id="accordion" role="tablist">
       <div class="card" v-for="(group, key, index) in groups">
-        <div class="card-header" role="tab" xxid="headingOne">
+        <div class="card-header" role="tab">
           <h5 class="mb-0">
             <a data-toggle="collapse" v-bind:href="'#group' + key">
               {{ group.title }}
@@ -137,7 +137,7 @@
             </button>
           </div>
           <div class="modal-body">
-            {{ jobModal.body }}
+            <pre>{{ jobModal.body }}</pre>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
