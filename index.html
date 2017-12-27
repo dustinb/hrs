@@ -106,7 +106,8 @@
               <thead>
               <tr>
                 <th>Title</th>
-                <th>cron</th>
+                <th v-if="group.cron">Finished</th>
+                <th v-else>Cron</th>
                 <th>URL</th>
                 <th>Next Run</th>
                 <th>Status</th>
@@ -115,7 +116,10 @@
               <tbody>
               <tr v-for="job in group.jobs" v-bind:class="{'table-danger': job.statusCode != 200 && job.statusCode != 0}">
                 <td>{{ job.title }}</td>
-                <td><a v-bind:href="job.guru" target="_blank">{{ job.cron }}</a></td>
+                <td>
+                  <a v-if="job.cron" v-bind:href="job.guru" target="_blank">{{ job.cron }}</a>
+                  <span v-else>{{ job.lastRun }}</span>
+                </td>
                 <td>{{ job.url }}</td>
                 <td>{{ job.nextRun }}</td>
                 <td><a href="#" v-bind:title="job.string"><span v-on:click="modal(job)" v-bind:class="{'badge-info': job.statusCode == 200, 'badge-danger': job.statusCode != 200 && job.statusCode != 0}" class="badge" v-bind:title="job.lastStatus">{{job.statusCode}}</span></a></td>

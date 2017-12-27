@@ -63,11 +63,26 @@
           "title": "Cron Guru",
           "cron": "30 2 * 1-5 *",
           "url": "http://www.crontab.guru",
-          "runOnStart": true,
+          "runOnStart": false,
           "done": true
         }
       ]
+    },
+    {
+      "title": "Waterfall Group",
+      "cron": "*/1 * * * * ",
+      "jobs": [
+        {
+          "title": "Job 1",
+          "url": "http://hrs.fivetechdev.com/timestamp.php"
+        },
+        {
+          "title": "Job 2",
+          "url": "http://hrs.fivetechdev.com/timestamp.php?uniqueurl=1"
+        }
+      ]
     }
+
   ]
 }
 

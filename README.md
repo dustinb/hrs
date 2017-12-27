@@ -2,26 +2,20 @@
 
 Schedule, record, and notify of http based cron jobs.
 
-# Requirements
+# Features
 
 1. Group jobs into meaningful groups like application or client
 2. Allow running jobs on multiple domains i.e. development/production
 3. Record response for all instances: status, code, body
-4. Simple string match to identify success
-
-# TODO
-
-1. Reload configuration file without restart
-2. Email or txt notifications
-3. Send URL to Slack but only if it's not unfurled
-4. String match to identify error state
+4. String match to identify success/failure
+5. Allow "waterfall" or running a list of jobs in sequence
 
 # Setup
 
 1. Clone this repository
 2. `npm install`
 3. `nodejs index.js`
-4. Browse to http://localhost:3000 or server address
+4. Browse to http://localhost:3000
 
 # Configuration / Command Line Options
 
@@ -33,9 +27,7 @@ Can set job `"done": true` to to disable a specific job.
 To specify a different configuration file `nodejs index.js -c local.json`.  The default is
 `config.json`.
 
-To specify timer resolution in seconds use `-t`. Default is 60 seconds, the smallest resolution
-for a cron job. If all jobs are daily a resolution of 1 hour might make more sense. 
-`nodejs index.js -t 3600`
+Give the group a cron property to run all jobs in that group in sequence. See `Waterfall Group` in `config.json`. 
 
 # Slack Webhook
 

@@ -2,7 +2,7 @@ var parser = require('cron-parser');
 var request = require('request');
 var fs = require('fs');
 var moment = require('moment');
-
+var async = require('async');
 var loopSeconds = 60;
 var configFile = 'config.json';
 
@@ -40,6 +40,7 @@ var Job = function (conf) {
   this.protocol = conf.protocol;
   this.string = conf.string;
   this.runOnStart = conf.runOnStart;
+  this.timeout = conf.timeout;
 };
 
 Job.prototype.next = function () {
@@ -49,22 +50,33 @@ Job.prototype.next = function () {
 };
 
 Job.prototype.init = function() {
+
+  if (! this.timeout) {
+    this.timeout = config.defaultTimeout;
+  }
+
   if (this.uri) {
     this.url = this.protocol + '://' + this.domain + this.uri;
   }
+
   console.log('Initializing ' + this.url);
-  this.guru = "https://crontab.guru/#" + this.cron.replace(' ', '_');
-  this.interval = parser.parseExpression(this.cron);
+
+  // Not all jobs have cron.  Some are run in sequence when group has cron
+  if (this.cron) {
+    this.guru = "https://crontab.guru/#" + this.cron.replace(' ', '_');
+    this.interval = parser.parseExpression(this.cron);
+    this.next();
+    if (!config.disabled && this.runOnStart) {
+      this.run();
+    }
+  }
   this.lastStatus = 'N/A';
   this.statusCode = 0;
-
-  this.next();
-  if (!config.disabled && this.runOnStart) {
-    this.run();
-  }
 };
 
-Job.prototype.request = function(url) {
+// callback is optional and used for groups that run jobs in sequence
+Job.prototype.request = function(url, callback) {
+  console.log("Request: " + url);
   var that = this;
   request.get({url: url, timeout: config.defaultTimeout * 1000}, function (error, response, body) {
     if (response) {
@@ -91,7 +103,13 @@ Job.prototype.request = function(url) {
     } else {
       console.log(error);
     }
+    that.lastRun = moment().format('LLLL');
     io.emit('job', that);
+
+    // Run the next job in the group sequence
+    if (typeof callback != 'undefined') {
+      callback();
+    }
   });
 };
 
@@ -108,8 +126,9 @@ if (config.slackhook) {
   slack.setWebhook(config.slackhook);
 }
 
-config.groups.forEach(function(group) {
+config.groups.forEach(function(group, index) {
   var jobCount = group.jobs.length;
+
   for (var i=0; i<jobCount; i++) {
     var job = new Job(group.jobs[i]);
     job.group = group.title;
@@ -131,10 +150,21 @@ config.groups.forEach(function(group) {
       job.init();
       group.jobs[i] = job;
     }
-
   }
-});
 
+  if (group.cron) {
+    group.interval = parser.parseExpression(group.cron);
+    group.next = function() {
+      this._next = this.interval.next();
+      this.done = this._next.done;
+      this.nextRun = this._next._date.format('LLLL');
+      this.jobs[0].nextRun = this.nextRun;
+    };
+    group.next();
+    config.groups[index] = group;
+  }
+
+});
 
 server.listen(config.port);
 
@@ -151,17 +181,30 @@ setInterval(function() {
 
   for (var g=0; g<config.groups.length; g++) {
     var group = config.groups[g];
-    for (var i=0; i<group.jobs.length; i++) {
-      var job = group.jobs[i];
-      if (job.done) continue;
 
-      // TODO: Correct way to get moment object from CronDate?
-      if (now.isSameOrAfter(job._next._date, 'minute')) {
-        if (! config.disabled) {
-          job.run();
+    // If the group itself has a cron entry we'll run each job in the group in sequence.
+    if (group.cron) {
+      if (now.isSameOrAfter(group._next._date, 'minute')) {
+        group.next();
+        async.eachSeries(group.jobs, function(job, callback) {
+          // Need to send this callback to job.request() so we can start the next one
+          job.request(job.url, callback);
+        });
+
+      }
+    } else {
+      for (var i=0; i<group.jobs.length; i++) {
+        var job = group.jobs[i];
+        if (job.done) continue;
+
+        // TODO: Correct way to get moment object from CronDate?
+        if (now.isSameOrAfter(job._next._date, 'minute')) {
+          if (! config.disabled) {
+            job.run();
+          }
+          // TODO: Should job continue to run on error?
+          job.next();
         }
-        // TODO: Should job continue to run on error?
-        job.next();
       }
     }
   }
