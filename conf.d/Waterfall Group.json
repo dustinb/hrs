@@ -1,0 +1,14 @@
+{
+  "title": "Waterfall Group",
+  "cron": "*/1 * * * * ",
+  "jobs": [
+    {
+      "title": "Job 1",
+      "url": "http://hrs.fivetechdev.com/timestamp.php"
+    },
+    {
+      "title": "Job 2",
+      "url": "http://hrs.fivetechdev.com/timestamp.php?uniqueurl=1"
+    }
+  ]
+}

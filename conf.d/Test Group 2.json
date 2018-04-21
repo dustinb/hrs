@@ -1,0 +1,18 @@
+{
+  "title": "Test Group 2",
+  "jobs": [
+    {
+      "title": "The fastest cron",
+      "cron": "* * * * * ",
+      "url": "http://www.example.com",
+      "done": true
+    },
+    {
+      "title": "Cron Guru",
+      "cron": "30 2 * 1-5 *",
+      "url": "http://www.crontab.guru",
+      "runOnStart": false,
+      "done": true
+    }
+  ]
+}
