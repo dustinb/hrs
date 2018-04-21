@@ -1,3 +1,6 @@
+// TODO: https://github.com/niegowski/node-daemonize2
+// TODO: NoSql Persistence?
+
 var parser = require('cron-parser');
 var request = require('request');
 var fs = require('fs');
@@ -5,14 +8,15 @@ var moment = require('moment');
 var async = require('async');
 var loopSeconds = 60;
 var configFile = 'config.json';
+var hash = require('object-hash');
 
 var argv = require('minimist')(process.argv.slice(2));
 if (argv.c) {
   configFile = argv.c;
 }
 
-console.log("Reading configuration from " + configFile);
-var config = JSON.parse(fs.readFileSync(configFile, 'utf8'));
+//console.log("Reading configuration from " + configFile);
+//var config = JSON.parse(fs.readFileSync(configFile, 'utf8'));
 
 // Setup HTTP server and sockets.  We only serve one page
 var server = require('http').createServer(function(req, res) {
@@ -118,18 +122,67 @@ Job.prototype.run = function() {
 };
 
 
-// Setup Slack webhook if URL is defined in configuration.  Uses #HRS channel
-if (config.slackhook) {
-  console.log("Setting up slack webhook");
-  var Slack = require('slack-node');
-  slack = new Slack();
-  slack.setWebhook(config.slackhook);
+process.on('SIGHUP', function() {
+  console.log('Received SIGHUP');
+  readConfiguration();
+});
+
+
+function readConfiguration() {
+  config = tryParseJSON(fs.readFileSync(configFile, 'utf-8'));
+  if (! config) {
+    console.log(configFile + ' is not valid JSON');
+    return;
+  }
+
+  // Setup Slack webhook if URL is defined in configuration.  Uses #HRS channel
+  if (config.slackhook) {
+    console.log("Setting up slack webhook");
+    var Slack = require('slack-node');
+    slack = new Slack();
+    slack.setWebhook(config.slackhook);
+  }
+
+  if (config.configDirectory) {
+    config.groups = [];
+
+    fs.readdir(config.configDirectory, function(err, filenames) {
+      if (err) {
+        console.log('Error reading configDirectory ' + config.configDirectory);
+        console.log(err);
+        return;
+      }
+      filenames.forEach(function(filename) {
+        console.log(filename);
+        fs.readFile(config.configDirectory + '/' + filename, 'utf-8', (err, data) => {
+          var group = tryParseJSON(data);
+          if (group) {
+            groupSetup(group);
+          } else{
+            console.log(filename + ' is not valid JSON');
+          }
+        });
+      });
+    });
+  } else {
+    config.groups.forEach(function (group, index) {
+      groupSetup(group);
+    });
+  }
+
 }
 
-config.groups.forEach(function(group, index) {
+/**
+ * Upon reading the configuration setup the group and job objects. Will only process the object/data if the group's
+ * hash does not match an existing one.  This allows SIGHUP to only change updated or new group/job data.
+ */
+function groupSetup(group) {
+
+  group.hash = hash(group);
+
   var jobCount = group.jobs.length;
 
-  for (var i=0; i<jobCount; i++) {
+  for (var i = 0; i < jobCount; i++) {
     var job = new Job(group.jobs[i]);
     job.group = group.title;
 
@@ -140,7 +193,7 @@ config.groups.forEach(function(group, index) {
       job.init();
       group.jobs[i] = job;
 
-      for (var d=1; d<job.domains.length; d++) {
+      for (var d = 1; d < job.domains.length; d++) {
         var jobm = new Job(group.jobs[i]);
         jobm.domain = jobm.domains[d];
         jobm.init();
@@ -154,17 +207,21 @@ config.groups.forEach(function(group, index) {
 
   if (group.cron) {
     group.interval = parser.parseExpression(group.cron);
-    group.next = function() {
+    group.next = function () {
       this._next = this.interval.next();
       this.done = this._next.done;
       this.nextRun = this._next._date.format('LLLL');
       this.jobs[0].nextRun = this.nextRun;
     };
     group.next();
-    config.groups[index] = group;
   }
 
-});
+  config.groups.push(group);
+  console.log(config.groups);
+  io.emit('groups', config.groups);
+}
+
+readConfiguration();
 
 server.listen(config.port);
 
@@ -210,6 +267,18 @@ setInterval(function() {
   }
 }, loopSeconds * 1000);
 
+// https://stackoverflow.com/questions/3710204/how-to-check-if-a-string-is-a-valid-json-string-in-javascript-without-using-try
+function tryParseJSON (jsonString) {
+  try {
+    var o = JSON.parse(jsonString);
+    if (o && typeof o === "object") {
+      return o;
+    }
+  }
+  catch (e) {
+  }
+  return false;
+}
 
 
 

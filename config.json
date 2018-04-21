@@ -1,88 +1,9 @@
 {
   "disabled": false,
-  "slackhook": "",
-  "slackChannel": "#hrs",
+  "slackhook": "https://hooks.slack.com/services/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",
+  "slackChannel": "@dustin",
   "port": 3000,
   "defaultTimeout": 120,
-  "groups": [
-    {
-      "title": "Site Monitors",
-      "jobs": [
-        {
-          "title": "Home Pages",
-          "cron": "*/10 * * * * ",
-          "uri": "/",
-          "protocol": "http",
-          "domains": [
-            "www.falkpaper.com",
-            "www.babyongrand.com",
-            "www.vailhealth.org",
-            "www.automation.com"
-          ],
-          "string": "</body>",
-          "runOnStart": true
-        },
-        {
-          "cron": "*/2 16 * * *",
-          "title": "Testing 500 Response",
-          "url": "http://hrs.fivetechdev.com/test500.php",
-          "runOnStart": true
-        },
-        {
-          "cron": "*/2 17 * * *",
-          "title": "Testing 404 Response",
-          "url": "http://www.example.com/url-not-here",
-          "runOnStart": true
-        },
-        {
-          "title": "Five Technology",
-          "cron": "*/1 * * * * ",
-          "url": "http://www.fivetechnology.com",
-          "string": "Let's Get Started!",
-          "runOnStart": true
-        },
-        {
-          "title": "Five Tech Team",
-          "cron": "*/5 * * * * ",
-          "url": "http://www.fivetechteam.com",
-          "string": "Cll us @",
-          "runOnStart": false
-        }
-      ]
-    },
-    {
-      "title": "Test Group 2",
-      "jobs": [
-        {
-          "title": "The fastest cron",
-          "cron": "* * * * * ",
-          "url": "http://www.example.com",
-          "done": true
-        },
-        {
-          "title": "Cron Guru",
-          "cron": "30 2 * 1-5 *",
-          "url": "http://www.crontab.guru",
-          "runOnStart": false,
-          "done": true
-        }
-      ]
-    },
-    {
-      "title": "Waterfall Group",
-      "cron": "*/1 * * * * ",
-      "jobs": [
-        {
-          "title": "Job 1",
-          "url": "http://hrs.fivetechdev.com/timestamp.php"
-        },
-        {
-          "title": "Job 2",
-          "url": "http://hrs.fivetechdev.com/timestamp.php?uniqueurl=1"
-        }
-      ]
-    }
-
-  ]
+  "configDirectory": "./conf.d"
 }
 
