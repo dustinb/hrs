@@ -21,15 +21,17 @@ Schedules HTTP(S) requests using crontab format and reports on the status.
 
 Use `node hrs stop` to stop HRS.  To reload new/updated configuration `node hrs reload`.
 
+To start HRS with alternate config `node hrs start -c simple.json`
+
 # Configuration
 
-A job requires `title`, `cron`, and a `url`.  Optionally these properties:
+A job requires `title`, `cron`, and a `url`.
  
- | Property     | Description |
- | -------------| ------------|
+ | Optional     | Description                                                     |
+ | -------------| ----------------------------------------------------------------|
  | `string`     | Look for this string in response. If not found treat as failure |
- | `runOnStart` | HRS will run this job on startup (and reload) |
- | `done`       | Set to true if you want to disable this job |
+ | `runOnStart` | HRS will run this job on startup (and reload)                   |
+ | `done`       | Set to true if you want to disable this job                     |
 
 ```
     {
@@ -62,8 +64,8 @@ If wanting to run the same job on multiple domains include `protocol` and `domai
   
 ## Waterfall
 
-Want to run many jobs in sequence one after the other?  The cron is put in the group and indicates a start
-time.  Each job is run after the previous completes.
+Run jobs in sequence by putting the cron in the group instead of the job.  The cron specifies
+a start time for the first job, second one runs after first completes and so on.
 
 ```
 {
@@ -81,9 +83,6 @@ time.  Each job is run after the previous completes.
   ]
 }
 ```       
-
-To specify a different configuration file `nodejs index.js -c local.json`.  The default is
-`config.json`.
 
 # Slack Webhook
 

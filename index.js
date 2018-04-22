@@ -1,5 +1,6 @@
 // TODO: https://github.com/niegowski/node-daemonize2
 // TODO: NoSql Persistence?
+// TODO: Move Job into module
 
 var parser = require('cron-parser');
 var request = require('request');
@@ -14,9 +15,6 @@ var argv = require('minimist')(process.argv.slice(2));
 if (argv.c) {
   configFile = argv.c;
 }
-
-//console.log("Reading configuration from " + configFile);
-//var config = JSON.parse(fs.readFileSync(configFile, 'utf8'));
 
 // Setup HTTP server and sockets.  We only serve one page
 var server = require('http').createServer(function(req, res) {
@@ -135,6 +133,8 @@ function readConfiguration() {
     return;
   }
 
+  config.Groups = [];
+
   // Setup Slack webhook if URL is defined in configuration.  Uses #HRS channel
   if (config.slackhook) {
     console.log("Setting up slack webhook");
@@ -144,8 +144,6 @@ function readConfiguration() {
   }
 
   if (config.configDirectory) {
-    config.groups = [];
-
     fs.readdir(config.configDirectory, function(err, filenames) {
       if (err) {
         console.log('Error reading configDirectory ' + config.configDirectory);
@@ -216,9 +214,9 @@ function groupSetup(group) {
     group.next();
   }
 
-  config.groups.push(group);
-  console.log(config.groups);
-  io.emit('groups', config.groups);
+  config.Groups.push(group);
+  console.log(config.Groups);
+  io.emit('groups', config.Groups);
 }
 
 readConfiguration();
@@ -236,8 +234,8 @@ setInterval(function() {
 
   io.emit('tick', {serverTime: now.format('LLLL')});
 
-  for (var g=0; g<config.groups.length; g++) {
-    var group = config.groups[g];
+  for (var g=0; g<config.Groups.length; g++) {
+    var group = config.Groups[g];
 
     // If the group itself has a cron entry we'll run each job in the group in sequence.
     if (group.cron) {
