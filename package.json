@@ -22,12 +22,13 @@
   },
   "homepage": "https://github.com/dustinb/hrs#readme",
   "dependencies": {
+    "async": "^2.4.0",
     "cron-parser": "^2.4.3",
+    "daemonize2": "^0.4.2",
     "minimist": "^1.2.0",
     "moment": "^2.19.1",
     "request": "^2.83.0",
     "slack-node": "^0.1.8",
-    "socket.io": "^2.0.3",
-    "async": "^2.4.0"
+    "socket.io": "^2.0.3"
   }
 }
