@@ -1,6 +1,6 @@
 # HTTP Request Scheduler
 
-Schedule, record, and notify of http based cron jobs.
+Schedules HTTP(S) requests using crontab format and reports on the status.
 
 # Features
 
@@ -9,33 +9,90 @@ Schedule, record, and notify of http based cron jobs.
 3. Record response for all instances: status, code, body
 4. String match to identify success/failure
 5. Allow "waterfall" or running a list of jobs in sequence
+6. 
 
 # Setup
 
-1. Clone this repository
-2. `npm install`
-3. `nodejs index.js`
-4. Browse to http://localhost:3000
+1. `git clone git@github.com:dustinb/hrs.git`
+2. `cd hrs`
+3. `npm install`
+4. `node hrs start`
+5. Browse to http://localhost:3000
 
-# Configuration / Command Line Options
+Use `node hrs stop` to stop HRS.  To reload new/updated configuration `node hrs reload`.
 
-Set `"disabled": true` in the config file to only parse and display jobs, never calls `run()`.  Good for testing json
-syntax.
+# Configuration
 
-Can set job `"done": true` to to disable a specific job.
+A job requires `title`, `cron`, and a `url`.  Optionally these properties:
+ 
+ | Property     | Description |
+ | -------------| ------------|
+ | `string`     | Look for this string in response. If not found treat as failure |
+ | `runOnStart` | HRS will run this job on startup (and reload) |
+ | `done`       | Set to true if you want to disable this job |
+
+```
+    {
+      "title": "Five Tech Team",
+      "cron": "*/5 * * * * ",
+      "url": "http://www.fivetechteam.com",
+      "string": "Call us @",
+      "runOnStart": false,
+      "done": false
+    }
+```
+    
+## Multiple Domains
+
+If wanting to run the same job on multiple domains include `protocol` and `domains`.
+
+```
+{
+  "title": "Multiple Domains",
+  "cron": "*/5 * * * * ",
+  "url": "/res/job/cleanhouse.php",
+  "protocol": "http",
+  "domains": [
+     "dev.example.com",
+     "staging.example.com",
+     "production.example.com"
+  ]
+}
+```
+  
+## Waterfall
+
+Want to run many jobs in sequence one after the other?  The cron is put in the group and indicates a start
+time.  Each job is run after the previous completes.
+
+```
+{
+  "title": "Waterfall Group",
+  "cron": "10 2 * * * ",
+  "jobs": [
+    {
+      "title": "Job 1",
+      "url": "http://hrs.fivetechdev.com/timestamp.php"
+    },
+    {
+      "title": "Job 2",
+      "url": "http://hrs.fivetechdev.com/timestamp.php?uniqueurl=1"
+    }
+  ]
+}
+```       
 
 To specify a different configuration file `nodejs index.js -c local.json`.  The default is
 `config.json`.
 
-Give the group a cron property to run all jobs in that group in sequence. See `Waterfall Group` in `config.json`. 
-
 # Slack Webhook
 
-Add your Slack webhook url to the configuration to send notifications to #HRS channel
+Add your Slack webhook url to the configuration to allow HRS to send error notifications
 
 ```json
 {
   "slackhook": "https://hooks.slack.com/services/xxxxxxxxx/xxxxxxxxx/xxxxxxxxxxxxxxxxxxxxxxxx",
+  "slackChannel": "#HRS",
   "groups": [ 
     {
       "title": "Group 1",

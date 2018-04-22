@@ -15,6 +15,10 @@ switch (process.argv[2]) {
     daemon.stop();
     break;
 
+  case "reload":
+    daemon.sendSignal(["SIGHUP"]);
+    break;
+
   default:
     console.log("Usage: [start|stop]");
 }
