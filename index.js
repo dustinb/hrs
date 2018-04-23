@@ -3,17 +3,20 @@
 // TODO: Move Job into module
 
 var parser = require('cron-parser');
-var request = require('request');
 var fs = require('fs');
 var moment = require('moment');
 var async = require('async');
-var loopSeconds = 60;
-var configFile = 'config.json';
-var hash = require('object-hash');
+var Job = require('./Job.js');
+var Slack = require('slack-node');
+let YAML = require('yamljs');
 
-var argv = require('minimist')(process.argv.slice(2));
-if (argv.c) {
-  configFile = argv.c;
+var config = {
+  configFile: 'config',
+  port: 3000
+};
+
+if (process.argv[3]) {
+  config.configFile = process.argv[3];
 }
 
 // Setup HTTP server and sockets.  We only serve one page
@@ -26,147 +29,36 @@ var io = require('socket.io')(server);
 io.on('connection', function(socket) {
   // Will validate the connection
   socket.on('register', function(data) {
-    socket.emit('groups', config.groups);
+    socket.emit('groups', config.Groups);
     socket.emit('tick', {serverTime: moment().format('LLLL')});
   });
 });
-
-var Job = function (conf) {
-  this.title = conf.title;
-  this.cron = conf.cron;
-  this.uri = conf.uri;
-  this.url = conf.url;
-  this.done = conf.done;
-  this.domain = '';
-  this.domains = conf.domains;
-  this.protocol = conf.protocol;
-  this.string = conf.string;
-  this.runOnStart = conf.runOnStart;
-  this.timeout = conf.timeout;
-};
-
-Job.prototype.next = function () {
-  this._next = this.interval.next();
-  this.done = this._next.done;
-  this.nextRun = this._next._date.format('LLLL');
-};
-
-Job.prototype.init = function() {
-
-  if (! this.timeout) {
-    this.timeout = config.defaultTimeout;
-  }
-
-  if (this.uri) {
-    this.url = this.protocol + '://' + this.domain + this.uri;
-  }
-
-  console.log('Initializing ' + this.url);
-
-  // Not all jobs have cron.  Some are run in sequence when group has cron
-  if (this.cron) {
-    this.guru = "https://crontab.guru/#" + this.cron.replace(' ', '_');
-    this.interval = parser.parseExpression(this.cron);
-    this.next();
-    if (!config.disabled && this.runOnStart) {
-      this.run();
-    }
-  }
-  this.lastStatus = 'N/A';
-  this.statusCode = 0;
-};
-
-// callback is optional and used for groups that run jobs in sequence
-Job.prototype.request = function(url, callback) {
-  console.log("Request: " + url);
-  var that = this;
-  request.get({url: url, timeout: config.defaultTimeout * 1000}, function (error, response, body) {
-    if (response) {
-      that.statusCode = response.statusCode;
-      that.lastStatus = response.statusMessage;
-      that.body = body;
-      if (that.string) {
-        console.log('Searching for ' + that.string);
-        if (body.search(that.string) === -1) {
-          that.statusCode = 206;
-          that.lastStatus = "String " + that.string + " not found";
-        }
-      }
-      if (config.slackhook && that.statusCode != 200) {
-        console.log("Sending Slack notification");
-        slack.webhook({
-          channel: config.slackChannel,
-          // Not sending the URL as Slack may "unfurl" it essentially running the job again
-          text: that.group + ": " + that.title + ": " + that.statusCode + ": " + that.lastStatus
-        }, function(err, response) {
-          //console.log(response);
-        });
-      }
-    } else {
-      console.log(error);
-    }
-    that.lastRun = moment().format('LLLL');
-    io.emit('job', that);
-
-    // Run the next job in the group sequence
-    if (typeof callback != 'undefined') {
-      callback();
-    }
-  });
-};
-
-Job.prototype.run = function() {
-  this.request(this.url);
-};
-
 
 process.on('SIGHUP', function() {
   console.log('Received SIGHUP');
   readConfiguration();
 });
 
-
 function readConfiguration() {
-  config = tryParseJSON(fs.readFileSync(configFile, 'utf-8'));
-  if (! config) {
-    console.log(configFile + ' is not valid JSON');
-    return;
-  }
+  // TODO: Catch exception
+  config = YAML.load(config.configFile);
 
   config.Groups = [];
 
-  // Setup Slack webhook if URL is defined in configuration.  Uses #HRS channel
-  if (config.slackhook) {
-    console.log("Setting up slack webhook");
-    var Slack = require('slack-node');
-    slack = new Slack();
-    slack.setWebhook(config.slackhook);
-  }
-
   if (config.configDirectory) {
-    fs.readdir(config.configDirectory, function(err, filenames) {
-      if (err) {
-        console.log('Error reading configDirectory ' + config.configDirectory);
-        console.log(err);
-        return;
-      }
-      filenames.forEach(function(filename) {
-        console.log(filename);
-        fs.readFile(config.configDirectory + '/' + filename, 'utf-8', (err, data) => {
-          var group = tryParseJSON(data);
-          if (group) {
-            groupSetup(group);
-          } else{
-            console.log(filename + ' is not valid JSON');
-          }
-        });
-      });
+    let filenames = fs.readdirSync(config.configDirectory);
+    filenames.forEach(function(filename) {
+      console.log(filename);
+      // TODO: Catch exception
+      let group = YAML.load(config.configDirectory + '/' + filename);
+      groupSetup(group);
     });
   } else {
-    config.groups.forEach(function (group, index) {
+    config.groups.forEach(function (group) {
       groupSetup(group);
     });
   }
+  delete config.groups;
 
 }
 
@@ -176,32 +68,35 @@ function readConfiguration() {
  */
 function groupSetup(group) {
 
-  group.hash = hash(group);
+  group.Jobs = [];
 
-  var jobCount = group.jobs.length;
+  group.jobs.forEach(function(jobConfig) {
+    console.log('configure' + jobConfig.title);
+    let job = new Job(jobConfig);
 
-  for (var i = 0; i < jobCount; i++) {
-    var job = new Job(group.jobs[i]);
+    if (typeof job.timeout === 'undefined') {
+      job.timeout = config.defaultTimeout;
+    }
     job.group = group.title;
+    job.disabled = job.disabled || config.disabled;
 
     // Treat multiple domains as separate job
-    if (job.uri && job.domains.length) {
+    if (job.protocol && job.domains.length) {
       // Multiple domains
       job.domain = job.domains[0];
-      job.init();
-      group.jobs[i] = job;
-
-      for (var d = 1; d < job.domains.length; d++) {
-        var jobm = new Job(group.jobs[i]);
-        jobm.domain = jobm.domains[d];
-        jobm.init();
-        group.jobs.push(jobm);
-      }
+      group.Jobs.push(job);
+      job.domains.forEach(function(domain) {
+        let jobm = new Job(jobConfig);
+        jobm.setURL(jobConfig.protocol + '://' + domain + jobConfig.url);
+      })
     } else {
-      job.init();
-      group.jobs[i] = job;
+      group.Jobs.push(job);
+      if (job.runOnStart) {
+        job.run(checkStatus);
+      }
     }
-  }
+  });
+  delete group.jobs;
 
   if (group.cron) {
     group.interval = parser.parseExpression(group.cron);
@@ -209,74 +104,68 @@ function groupSetup(group) {
       this._next = this.interval.next();
       this.done = this._next.done;
       this.nextRun = this._next._date.format('LLLL');
-      this.jobs[0].nextRun = this.nextRun;
+      this.Jobs[0].nextRun = this.nextRun;
     };
     group.next();
   }
 
   config.Groups.push(group);
-  console.log(config.Groups);
-  io.emit('groups', config.Groups);
+  //io.emit('groups', config.Groups);
 }
 
 readConfiguration();
 
 server.listen(config.port);
 
-// Start timing loop. Each job will be checked on every loop to determine if it's time to run
-if (argv.t) {
-  loopSeconds = argv.t;
-}
-console.log("Setting up timer for " + loopSeconds + " seconds");
-
 setInterval(function() {
-  var now = moment();
+  let now = moment();
 
   io.emit('tick', {serverTime: now.format('LLLL')});
 
-  for (var g=0; g<config.Groups.length; g++) {
-    var group = config.Groups[g];
+  config.Groups.forEach(function (group) {
 
     // If the group itself has a cron entry we'll run each job in the group in sequence.
     if (group.cron) {
       if (now.isSameOrAfter(group._next._date, 'minute')) {
         group.next();
-        async.eachSeries(group.jobs, function(job, callback) {
+        async.eachSeries(group.Jobs, function(job, callback) {
           // Need to send this callback to job.request() so we can start the next one
-          job.request(job.url, callback);
+          job.run(checkStatus, callback);
         });
-
       }
     } else {
-      for (var i=0; i<group.jobs.length; i++) {
-        var job = group.jobs[i];
-        if (job.done) continue;
+      group.Jobs.forEach(function(job) {
+        // job.done is set when the cron iteration finishes or disabled set to false in configuration
+        if (job.done) return;
 
-        // TODO: Correct way to get moment object from CronDate?
+        // Not sure if proper way to get moment object, using _private property here
         if (now.isSameOrAfter(job._next._date, 'minute')) {
-          if (! config.disabled) {
-            job.run();
-          }
-          // TODO: Should job continue to run on error?
           job.next();
+          job.run(checkStatus);
         }
-      }
+      });
     }
-  }
-}, loopSeconds * 1000);
+  });
+}, 60 * 1000);
 
-// https://stackoverflow.com/questions/3710204/how-to-check-if-a-string-is-a-valid-json-string-in-javascript-without-using-try
-function tryParseJSON (jsonString) {
-  try {
-    var o = JSON.parse(jsonString);
-    if (o && typeof o === "object") {
-      return o;
-    }
-  }
-  catch (e) {
-  }
-  return false;
+
+// Setup Slack webhook if URL is defined in configuration.  Uses #HRS channel
+if (config.slackhook) {
+  console.log("Setting up slack webhook");
+  slack = new Slack();
+  slack.setWebhook(config.slackhook);
 }
 
-
+function checkStatus() {
+  io.emit('job', this);
+  if (config.slackhook && this.statusCode != 200) {
+    slack.webhook({
+      channel: config.slackChannel,
+      // Not sending the URL as Slack may "unfurl" it essentially running the job again
+      text: this.group + ": " + this.title + ": " + this.statusCode + ": " + this.lastStatus
+    }, function(err, response) {
+      //console.log(response);
+    });
+  }
+}
 

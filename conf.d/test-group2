@@ -1,0 +1,14 @@
+title: Test Group 2
+jobs:
+  -
+    title: The fastest cron
+    cron: '* * * * * '
+    url: http://www.example.com
+    runOnStart: false
+    disabled: false
+  -
+    title: Cron Guru
+    cron: "30 2 * 1-5 *"
+    url: 'http://www.crontab.guru'
+    runOnStart: false
+    disabled: false

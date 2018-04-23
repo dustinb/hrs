@@ -1,0 +1,37 @@
+title: 'Site Monitors'
+jobs:
+  -
+    title: 'Home Pages'
+    cron: '*/10 * * * * '
+    url: /
+    protocol: http
+    domains:
+      - www.falkpaper.com
+      - www.babyongrand.com
+      - www.vailhealth.org
+      - www.automation.com
+    string: '</body>'
+    runOnStart: true
+  -
+    cron: '*/2 16 * * *'
+    title: 'Testing 500 Response'
+    url: 'http://hrs.fivetechdev.com/test500.php'
+    runOnStart: true
+  -
+    cron: '*/2 17 * * *'
+    title: 'Testing 404 Response'
+    url: 'http://www.example.com/url-not-here'
+    runOnStart: true
+  -
+    title: 'Five Technology'
+    cron: '*/1 * * * * '
+    url: 'http://www.fivetechnology.com'
+    string: Let's Get Started!
+    runOnStart: true
+  -
+    title: 'Five Tech Team'
+    cron: '*/5 * * * * '
+    url: 'http://www.fivetechteam.com'
+    string: 'Call us @'
+    runOnStart: false
+

@@ -62,9 +62,9 @@
           // Identify the job that was updated and set
           socket.on('job', function(job) {
             for(var i=0; i<groups.length; i++) {
-              for(var j=0; j<groups[i].jobs.length; j++) {
-                if (groups[i].jobs[j].cron === job.cron && groups[i].jobs[j].url === job.url) {
-                  Vue.set(groups[i].jobs, j, job);
+              for(var j=0; j<groups[i].Jobs.length; j++) {
+                if (groups[i].Jobs[j].cron === job.cron && groups[i].Jobs[j].url === job.url) {
+                  Vue.set(groups[i].Jobs, j, job);
                 }
               }
             }
@@ -114,7 +114,7 @@
               </tr>
               </thead>
               <tbody>
-              <tr v-for="job in group.jobs" v-bind:class="{'table-danger': job.statusCode != 200 && job.statusCode != 0}">
+              <tr v-for="job in group.Jobs" v-bind:class="{'table-danger': job.statusCode != 200 && job.statusCode != 0}">
                 <td>{{ job.title }}</td>
                 <td>
                   <a v-if="job.cron" v-bind:href="job.guru" target="_blank">{{ job.cron }}</a>

@@ -1,0 +1,6 @@
+disabled: false
+slackhook: "https://hooks.slack.com/services/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"
+slackChannel: "@dustin"
+port: 3000
+defaultTimeout: 120,
+configDirectory: "./conf.d"
