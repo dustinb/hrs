@@ -33,5 +33,5 @@ jobs:
     cron: '*/5 * * * * '
     url: 'http://www.fivetechteam.com'
     string: 'Call us @'
-    runOnStart: false
+    runOnStart: true
 

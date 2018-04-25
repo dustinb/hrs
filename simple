@@ -3,12 +3,9 @@ defaultTimeout: 120
 slackhook: 'https://hooks.slack.com/services/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'
 slackChannel: '@dustin'
 groups:
-  -
-    title: 'Group 1'
+  - title: 'Group 1'
     jobs:
-      -
-        title: 'Job 1'
+      - title: 'Job 1'
         cron: '30 2 * * * '
         url: 'http://www.example.com/'
         runOnStart: false
-

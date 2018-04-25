@@ -1,14 +1,11 @@
-// TODO: https://github.com/niegowski/node-daemonize2
-// TODO: NoSql Persistence?
-// TODO: Move Job into module
 
 var parser = require('cron-parser');
-var fs = require('fs');
+var     fs = require('fs');
 var moment = require('moment');
-var async = require('async');
-var Job = require('./Job.js');
-var Slack = require('slack-node');
-let YAML = require('yamljs');
+var  async = require('async');
+var    Job = require('./Job.js');
+var  Slack = require('slack-node');
+let   YAML = require('yamljs');
 
 var config = {
   configFile: 'config',
@@ -48,7 +45,7 @@ function readConfiguration() {
   if (config.configDirectory) {
     let filenames = fs.readdirSync(config.configDirectory);
     filenames.forEach(function(filename) {
-      console.log(filename);
+
       // TODO: Catch exception
       let group = YAML.load(config.configDirectory + '/' + filename);
       groupSetup(group);
@@ -58,6 +55,8 @@ function readConfiguration() {
       groupSetup(group);
     });
   }
+
+  // Clear all group data, will be rebuilding config and Jobs
   delete config.groups;
 
 }
@@ -68,34 +67,45 @@ function readConfiguration() {
  */
 function groupSetup(group) {
 
+  // Clear all Jobs in this group
   group.Jobs = [];
 
   group.jobs.forEach(function(jobConfig) {
-    console.log('configure' + jobConfig.title);
-    let job = new Job(jobConfig);
 
-    if (typeof job.timeout === 'undefined') {
-      job.timeout = config.defaultTimeout;
-    }
-    job.group = group.title;
-    job.disabled = job.disabled || config.disabled;
+    // Set group title on each Job
+    jobConfig.group = group.title;
 
-    // Treat multiple domains as separate job
-    if (job.protocol && job.domains.length) {
-      // Multiple domains
-      job.domain = job.domains[0];
-      group.Jobs.push(job);
-      job.domains.forEach(function(domain) {
-        let jobm = new Job(jobConfig);
-        jobm.setURL(jobConfig.protocol + '://' + domain + jobConfig.url);
+    // Job is disabled if itself, it's group, or whole config is disabled
+    jobConfig.disabled =  jobConfig.disabled || config.disabled || group.disabled;
+
+    if (jobConfig.protocol && jobConfig.domains.length) {
+      jobConfig.domains.forEach(function(domain) {
+
+        // New job using JobConfig as template.  Pass any defaults to be used if not specified
+        let job = new Job(jobConfig, {timeout: config.defaultTimeout});
+
+        // Since this is multiple jobs from one config make the title unique
+        job.title = job.title + '(' + domain + ')';
+
+        // URL is same for all of these except the domain
+        job.setURL(jobConfig.protocol + '://' + domain + jobConfig.url);
+
+        group.Jobs.push(job);
+
+        if (job.runOnStart) {
+          job.run(checkStatus);
+        }
       })
     } else {
+      let job = new Job(jobConfig, {timeout: config.defaultTimeout});
       group.Jobs.push(job);
       if (job.runOnStart) {
         job.run(checkStatus);
       }
     }
   });
+
+  // Clear the YAML data
   delete group.jobs;
 
   if (group.cron) {
@@ -110,7 +120,7 @@ function groupSetup(group) {
   }
 
   config.Groups.push(group);
-  //io.emit('groups', config.Groups);
+  io.emit('groups', config.Groups);
 }
 
 readConfiguration();

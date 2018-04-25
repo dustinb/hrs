@@ -1,7 +1,7 @@
 
-var parser = require('cron-parser');
+var  parser = require('cron-parser');
 var request = require('request');
-var moment = require('moment');
+var  moment = require('moment');
 
 module.exports = Job;
 
@@ -20,8 +20,6 @@ function Job(conf) {
   this.cron = conf.cron;
   this.done = conf.done;
   this.disabled = conf.disabled;
-  this.domain = '';
-  this.domains = conf.domains;
   this.protocol = conf.protocol;
   this.string = conf.string;
   this.runOnStart = conf.runOnStart;

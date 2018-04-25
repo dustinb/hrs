@@ -1,5 +1,5 @@
 title: 'Waterfall Group'
-cron: '*/1 * * * * '
+cron: '*/5 * * * * '
 jobs:
   -
     title: 'Job 1'

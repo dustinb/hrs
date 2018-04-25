@@ -9,7 +9,6 @@ Schedules HTTP(S) requests using crontab format and reports on the status.
 3. Record response for all instances: status, code, body
 4. String match to identify success/failure
 5. Allow "waterfall" or running a list of jobs in sequence
-6. 
 
 # Setup
 
@@ -21,7 +20,7 @@ Schedules HTTP(S) requests using crontab format and reports on the status.
 
 Use `node hrs stop` to stop HRS.  To reload new/updated configuration `node hrs reload`.
 
-To start HRS with alternate config `node hrs start -c simple.json`
+To start HRS with alternate config `node hrs start simple`
 
 # Configuration
 
@@ -33,33 +32,28 @@ A job requires `title`, `cron`, and a `url`.
  | `runOnStart` | HRS will run this job on startup (and reload)                   |
  | `done`       | Set to true if you want to disable this job                     |
 
-```
-    {
-      "title": "Five Tech Team",
-      "cron": "*/5 * * * * ",
-      "url": "http://www.fivetechteam.com",
-      "string": "Call us @",
-      "runOnStart": false,
-      "done": false
-    }
+```yaml
+title: Five Tech Team
+cron: "*/5 * * * * "
+url: "http://www.fivetechteam.com"
+string: "Call us @"
+runOnStart: false
+done: false
 ```
     
 ## Multiple Domains
 
 If wanting to run the same job on multiple domains include `protocol` and `domains`.
 
-```
-{
-  "title": "Multiple Domains",
-  "cron": "*/5 * * * * ",
-  "url": "/res/job/cleanhouse.php",
-  "protocol": "http",
-  "domains": [
-     "dev.example.com",
-     "staging.example.com",
-     "production.example.com"
-  ]
-}
+```yaml
+title: Multiple Domains
+cron: "*/5 * * * * "
+url: /res/job/cleanhouse.php
+protocol: http
+domains:
+  - dev.example.com
+  - staging.example.com
+  - production.example.com
 ```
   
 ## Waterfall
@@ -67,45 +61,30 @@ If wanting to run the same job on multiple domains include `protocol` and `domai
 Run jobs in sequence by putting the cron in the group instead of the job.  The cron specifies
 a start time for the first job, second one runs after first completes and so on.
 
-```
-{
-  "title": "Waterfall Group",
-  "cron": "10 2 * * * ",
-  "jobs": [
-    {
-      "title": "Job 1",
-      "url": "http://hrs.fivetechdev.com/timestamp.php"
-    },
-    {
-      "title": "Job 2",
-      "url": "http://hrs.fivetechdev.com/timestamp.php?uniqueurl=1"
-    }
-  ]
-}
+```yaml
+title: Waterfall Group
+cron: "10 2 * * * "
+jobs:
+  - title: Job 1
+    url: http://hrs.fivetechdev.com/timestamp.php
+  - title: Job 2
+    url: http://hrs.fivetechdev.com/timestamp.php?uniqueurl=1
 ```       
 
 # Slack Webhook
 
 Add your Slack webhook url to the configuration to allow HRS to send error notifications
 
-```json
-{
-  "slackhook": "https://hooks.slack.com/services/xxxxxxxxx/xxxxxxxxx/xxxxxxxxxxxxxxxxxxxxxxxx",
-  "slackChannel": "#HRS",
-  "groups": [ 
-    {
-      "title": "Group 1",
-      "jobs": [
-        {
-          "title": "Job 1",
-          "cron": "30 2 * * * ",
-          "url": "http://www.example.com/",
-          "runOnStart": true
-        }
-      ]
-    }
-  ]
-}
+```yaml
+slackhook: "https://hooks.slack.com/services/xxxxxxxxx/xxxxxxxxx/xxxxxxxxxxxxxxxxxxxxxxxx"
+slackChannel: "#HRS"
+groups:
+  - title: Group 1
+    jobs:
+      - title: Job 1
+        cron: "30 2 * * * "
+        url: http://www.example.com/
+        runOnStart: true
 ```
 
 ![](hrs.png)
