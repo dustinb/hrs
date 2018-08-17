@@ -27,7 +27,7 @@ function Job(conf) {
   this.statusCode = 0; // Start on a good note
   this.lastStatus = 'N/A';
 
-  if (0 && "Authenticated") {
+  if (1 && "Authenticated") {
     this.url = url;
   }
 
