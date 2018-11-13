@@ -1,5 +1,5 @@
 disabled: false
-slackhook: "https://hooks.slack.com/services/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"
+slackhook: "https://hooks.slack.com/services/xxxx/xxxx/xxxx"
 slackChannel: "@dustin"
 port: 3000
 defaultTimeout: 120,
